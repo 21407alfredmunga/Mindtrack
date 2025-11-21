@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // <<< ADD useCallback
+import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { useAuth } from '../AuthContext';
 import { 
@@ -7,128 +7,94 @@ import {
     where, 
     getDocs, 
     updateDoc, 
+    addDoc,
     doc 
 } from 'firebase/firestore';
 
 const GoalTracker = () => {
     const { currentUser } = useAuth();
-    const [activeGoals, setActiveGoals] = useState([]);
+    const [goals, setGoals] = useState([]);
     const [loading, setLoading] = useState(true);
-    const colors = { primary: '#4c9aff', success: '#4CAF50', text: '#333' };
 
-    // Function to fetch active goals from Firestore
-    // <<< 1. WRAP THE FUNCTION IN useCallback AND LIST ITS DEPENDENCIES
-    const fetchActiveGoals = useCallback(async () => {
-        if (!currentUser) return;
+    // Predefined goals with progress tracking
+    const defaultGoals = [
+        { id: 'hydrate', name: 'Hydrate', target: 2, current: 1.5, unit: 'L' },
+        { id: 'journaling', name: 'Journaling', target: 1, current: 1, unit: 'session' },
+        { id: 'mindful', name: 'Mindful Minutes', target: 10, current: 5, unit: 'min' },
+        { id: 'walk', name: 'Walk', target: 30, current: 0, unit: 'min' }
+    ];
 
-        setLoading(true);
-        try {
-            const q = query(
-                collection(db, 'SelfCareGoal'),
-                where("user_id", "==", currentUser.uid),
-                where("status", "==", "Active")
-            );
-            
-            const snapshot = await getDocs(q);
-            const goalsList = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            
-            setActiveGoals(goalsList);
-        } catch (error) {
-            console.error("Error fetching goals:", error);
-        } finally {
-            setLoading(false);
-        }
-    // Because this function uses currentUser, we list it as a dependency for useCallback
-    }, [currentUser]); 
-
-
-    // Fetch goals when the component first loads or when the user changes
     useEffect(() => {
-        // <<< 2. NOW CALL THE FUNCTION
-        fetchActiveGoals(); 
-    // <<< 3. ADD fetchActiveGoals TO THE DEPENDENCY ARRAY (Fixes the warning)
-    }, [fetchActiveGoals]); 
-
-
-    // Function to mark a goal as completed (This part is unchanged)
-    const handleCompleteGoal = async (goalId) => {
-        if (!window.confirm("Mark this goal as completed?")) return;
-
-        try {
-            const goalRef = doc(db, 'SelfCareGoal', goalId);
-            
-            await updateDoc(goalRef, {
-                status: 'Completed',
-                completed_at: new Date()
-            });
-            
-            // Re-fetch the goals list to ensure the UI is fresh
-            fetchActiveGoals(); 
-
-            alert("Goal successfully marked as Completed! Great job!");
-
-        } catch (error) {
-            console.error("Error completing goal:", error);
-            alert("Failed to update goal status.");
-        }
-    };
+        // For now, use default goals. In production, fetch from Firestore
+        setGoals(defaultGoals);
+        setLoading(false);
+    }, [currentUser]);
 
     if (loading) {
-        return <div style={{ textAlign: 'center', padding: '20px', color: colors.primary }}>Loading Active Goals...</div>;
+        return <div style={{ textAlign: 'center', padding: '20px', color: '#6C757D' }}>Loading...</div>;
     }
     
-    // ... rest of the render JSX remains the same
     return (
-        <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '10px', backgroundColor: '#fff' }}>
-            <h3 style={{ color: colors.primary, marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-                Your Active Goals ({activeGoals.length})
+        <div style={{ padding: '0' }}>
+            <h3 style={{
+                fontSize: '20px',
+                fontWeight: '600',
+                color: '#2C3E50',
+                marginBottom: '15px',
+                marginTop: 0
+            }}>
+                Self-Care Goals
             </h3>
             
-            {activeGoals.length === 0 ? (
-                <p style={{ textAlign: 'center', color: colors.text }}>
-                    You have no active self-care goals right now. Set one using the form below!
+            {goals.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#6C757D', fontSize: '14px' }}>
+                    No active goals yet.
                 </p>
             ) : (
-                <div style={{ display: 'grid', gap: '15px' }}>
-                    {activeGoals.map(goal => (
-                        <div 
-                            key={goal.id} 
-                            style={{ 
-                                padding: '15px', 
-                                border: '1px solid #ddd', 
-                                borderRadius: '8px',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                backgroundColor: '#fafffa'
-                            }}
-                        >
-                            <div>
-                                <h4 style={{ margin: '0 0 5px 0', color: colors.text }}>{goal.goal_type} ({goal.frequency})</h4>
-                                <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
-                                    Target: {goal.target_date.toDate().toLocaleDateString()}
-                                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {goals.map(goal => {
+                        const progress = Math.min((goal.current / goal.target) * 100, 100);
+                        const isCompleted = progress >= 100;
+
+                        return (
+                            <div key={goal.id}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '8px'
+                                }}>
+                                    <span style={{
+                                        fontSize: '15px',
+                                        fontWeight: '500',
+                                        color: '#2C3E50'
+                                    }}>
+                                        {goal.name}
+                                    </span>
+                                    <span style={{
+                                        fontSize: '13px',
+                                        color: isCompleted ? '#10B981' : '#6C757D'
+                                    }}>
+                                        {isCompleted ? 'Completed' : `${goal.current}${goal.unit} / ${goal.target}${goal.unit}`}
+                                    </span>
+                                </div>
+                                <div style={{
+                                    width: '100%',
+                                    height: '8px',
+                                    backgroundColor: '#E1E8ED',
+                                    borderRadius: '4px',
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{
+                                        width: `${progress}%`,
+                                        height: '100%',
+                                        backgroundColor: isCompleted ? '#10B981' : '#4A90E2',
+                                        transition: 'width 0.3s ease'
+                                    }} />
+                                </div>
                             </div>
-                            <button
-                                onClick={() => handleCompleteGoal(goal.id)}
-                                style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: colors.success,
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '5px',
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    fontSize: '14px'
-                                }}
-                            >
-                                Complete
-                            </button>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
