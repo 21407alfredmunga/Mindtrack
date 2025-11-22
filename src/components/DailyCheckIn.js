@@ -46,9 +46,9 @@ const DailyCheckIn = () => {
             });
             
             alert('Entry saved successfully!');
-            // Optionally clear the form
-            // setGratitudeData([]);
-            // setJournalData('');
+            // Clear the form after successful save
+            setGratitudeData([]);
+            setJournalData('');
         } catch (error) {
             console.error('Error saving entry:', error);
             alert('Failed to save entry. Please try again.');
@@ -121,7 +121,10 @@ const DailyCheckIn = () => {
 
                     {/* Gratitude Journal */}
                     <div style={cardStyle}>
-                        <GratitudeJournal onSave={setGratitudeData} />
+                        <GratitudeJournal 
+                            onSave={setGratitudeData}
+                            value={gratitudeData}
+                        />
                     </div>
 
                     {/* Private Journal */}
@@ -129,6 +132,7 @@ const DailyCheckIn = () => {
                         <PrivateJournal 
                             onSave={setJournalData}
                             onViewHistory={handleViewHistory}
+                            value={journalData}
                         />
                     </div>
 

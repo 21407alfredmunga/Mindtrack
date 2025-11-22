@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const PrivateJournal = ({ onSave, onViewHistory }) => {
+const PrivateJournal = ({ onSave, onViewHistory, value = '' }) => {
     const [journalEntry, setJournalEntry] = useState('');
 
+    // Reset when value prop changes (e.g., after save)
+    useEffect(() => {
+        if (value === '') {
+            setJournalEntry('');
+        }
+    }, [value]);
+
     // Pass journal data to parent when changed
-    React.useEffect(() => {
+    useEffect(() => {
         if (onSave) {
             onSave(journalEntry);
         }

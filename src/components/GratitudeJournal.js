@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const GratitudeJournal = ({ onSave }) => {
+const GratitudeJournal = ({ onSave, value = [] }) => {
     const [gratitude1, setGratitude1] = useState('');
     const [gratitude2, setGratitude2] = useState('');
     const [gratitude3, setGratitude3] = useState('');
+
+    // Reset when value prop changes (e.g., after save)
+    useEffect(() => {
+        if (value.length === 0) {
+            setGratitude1('');
+            setGratitude2('');
+            setGratitude3('');
+        }
+    }, [value]);
 
     const gratitudeItems = [
         { value: gratitude1, setter: setGratitude1, placeholder: '1. ...' },
@@ -12,7 +21,7 @@ const GratitudeJournal = ({ onSave }) => {
     ];
 
     // Pass gratitude data to parent when changed
-    React.useEffect(() => {
+    useEffect(() => {
         if (onSave) {
             const items = [gratitude1, gratitude2, gratitude3].filter(item => item.trim() !== '');
             onSave(items);
